@@ -159,9 +159,6 @@ pending → preparing → ready → completed
 ### Sugar Levels
 - 0%, 25%, 50%, 75%, 100%
 
-### Ice Levels
-- No Ice, Less Ice, Normal, More Ice
-
 ## Color Scheme
 
 - **Tea Brown**: #8B6F47
