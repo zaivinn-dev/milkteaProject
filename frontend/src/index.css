@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply transition-all duration-200;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+  @apply antialiased;
+}
+
+/* Navbar */
+.navbar {
+  @apply bg-gradient-to-r from-tea via-tea to-teaLight text-white shadow-2xl;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply bg-gradient-to-r from-tea to-teaLight hover:shadow-lg text-white font-bold py-2 px-4 rounded-lg transition;
+}
+
+.btn-secondary {
+  @apply bg-gradient-to-r from-teaLight to-orange-400 hover:shadow-lg text-white font-bold py-2 px-4 rounded-lg transition;
+}
+
+/* Cards */
+.card {
+  @apply bg-white rounded-2xl shadow-lg p-4 border border-gray-100;
+}
+
+.menu-item {
+  @apply bg-white rounded-2xl shadow-md hover:shadow-2xl transition cursor-pointer p-4 border-2 border-transparent hover:border-tea transform hover:scale-105;
+}
+
+.order-card {
+  @apply bg-gradient-to-br from-milk to-white rounded-2xl shadow-lg p-4 mb-4 border-l-4;
+}
+
+/* Inputs */
+input, textarea, select {
+  @apply transition-all duration-200;
+}
+
+input:focus, textarea:focus, select:focus {
+  @apply ring-2 ring-teaLight ring-offset-2;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded-full;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-tea rounded-full hover:bg-teaLight;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    @apply opacity-0 translate-y-4;
+  }
+  to {
+    @apply opacity-100 translate-y-0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    @apply shadow-lg;
+  }
+  50% {
+    @apply shadow-2xl;
+  }
+}
+
+.animate-slideUp {
+  @apply animate-[slideUp_0.3s_ease-out];
+}
+
+/* Custom hover effects */
+button {
+  @apply active:scale-95;
+}
+
+/* Loading animation */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  @apply animate-[spin_3s_linear_infinite];
+}
+
+/* Toast notifications */
+.toast {
+  @apply fixed bottom-4 right-4 bg-tea text-white px-6 py-3 rounded-lg shadow-2xl animate-slideUp;
+}
