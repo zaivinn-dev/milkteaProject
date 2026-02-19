@@ -162,12 +162,6 @@ pending → preparing → ready → completed
 ### Ice Levels
 - No Ice, Less Ice, Normal, More Ice
 
-### Add-ons (₱10 each)
-- Boba Pearls
-- Pudding
-- Aloe Vera
-- Grass Jelly
-
 ## Color Scheme
 
 - **Tea Brown**: #8B6F47
