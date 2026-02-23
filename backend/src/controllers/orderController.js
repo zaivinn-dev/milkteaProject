@@ -127,21 +127,79 @@ exports.updateOrderStatus = async (req, res) => {
 
 // Send order to thermal printer
 exports.sendOrderToPrinter = async (req, res) => {
+  console.log('[PRINT] ===== REQUEST START =====');
+  console.log(`[PRINT] Time: ${new Date().toLocaleTimeString()}`);
+  console.log(`[PRINT] OrderID Param: ${req.params.id}`);
+  
   try {
-    const order = orders.find(o => o._id === req.params.id);
-    if (!order) return res.status(404).json({ message: 'Order not found' });
+    const orderId = req.params.id;
+    
+    if (!orderId) {
+      console.error('[PRINT] No order ID provided!');
+      return res.status(400).json({ 
+        success: false,
+        message: 'Order ID is required' 
+      });
+    }
+    
+    const order = orders.find(o => o._id === orderId);
+    
+    if (!order) {
+      console.error(`[PRINT] Order not found. Total orders: ${orders.length}`);
+      return res.status(404).json({ 
+        success: false,
+        message: 'Order not found'
+      });
+    }
 
+    console.log(`[PRINT] Found: ${order.orderNumber} | Customer: ${order.customerName} | Items: ${order.items?.length || 0}`);
+    
+    // Validate order has items
+    if (!order.items || order.items.length === 0) {
+      console.warn('[PRINT] Order has no items!');
+      return res.status(400).json({ 
+        success: false,
+        message: 'Order has no items to print'
+      });
+    }
+
+    // Send to printer
+    console.log(`[PRINT] Sending to printer...`);
     const printerResult = await sendToPrinter(order);
     
     if (printerResult.success) {
+      console.log(`[PRINT] SUCCESS!`);
       order.printedToPrinter = true;
-      saveOrders(orders); // Save to file
-      res.json({ message: 'Order sent to printer', order });
+      saveOrders(orders);
+      
+      res.json({ 
+        success: true,
+        message: 'Order sent to printer', 
+        orderNumber: order.orderNumber
+      });
     } else {
-      res.status(500).json({ message: 'Failed to send to printer', error: printerResult.error });
+      console.error(`[PRINT] FAILED: ${printerResult.error}`);
+      // Still return 200 with error details (so frontend can show it)
+      res.json({ 
+        success: false,
+        message: 'Failed to send to printer',
+        error: printerResult.error,
+        details: printerResult.details,
+        orderNumber: order.orderNumber
+      });
     }
+    
+    console.log('[PRINT] ===== REQUEST END =====\n');
+    
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('[PRINT] EXCEPTION:', error.message);
+    console.error(error.stack);
+    
+    res.json({ 
+      success: false,
+      message: 'Error during print request',
+      error: error.message
+    });
   }
 };
 
