@@ -42,11 +42,17 @@ export default function OrderPreparation() {
 
   const handlePrintOrder = async (orderId) => {
     try {
-      await axios.post(`/api/orders/${orderId}/print`);
-      alert('Order sent to printer!');
+      const response = await axios.post(`/api/orders/${orderId}/print`);
+      if (response.data.success) {
+        alert(`✓ Order ${response.data.orderNumber} sent to printer!`);
+      } else {
+        alert(`✗ Printer Error:\n${response.data.message}\n${response.data.details || ''}`);
+      }
     } catch (error) {
       console.error('Error printing order:', error);
-      alert('Failed to send to printer. Check ESP32 connection.');
+      const errorMsg = error.response?.data?.message || 'Failed to send to printer';
+      const details = error.response?.data?.details || 'Check if ESP32 is connected';
+      alert(`✗ Print failed:\n${errorMsg}\n${details}`);
     }
   };
 
