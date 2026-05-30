@@ -1,176 +1,174 @@
-# Milk Tea Ordering System
+# BigBrew Milk Tea Ordering System
 
-A complete web-based ordering system for milk tea shops with order management and thermal printer integration for ESP32.
+Web-based ordering for a milk tea shop: customer kiosk, kitchen order board, and admin back office. Data is stored in **Supabase (PostgreSQL)**.
 
-## Project Structure
+## URLs (local dev)
 
-### Backend (Node.js + Express)
-```
-backend/
-├── server.js              # Main server entry point
-├── package.json          # Dependencies
-├── .env.example          # Environment variables template
-├── src/
-│   ├── controllers/      # Business logic
-│   │   ├── menuController.js
-│   │   └── orderController.js
-│   ├── models/           # Database schemas
-│   │   ├── Menu.js
-│   │   └── Order.js
-│   ├── routes/           # API endpoints
-│   │   ├── menuRoutes.js
-│   │   ├── orderRoutes.js
-│   │   └── printerRoutes.js
-│   └── utils/
-│       └── printerService.js   # ESP32 thermal printer integration
-```
+| Surface | URL | Who |
+|--------|-----|-----|
+| Customer ordering | http://localhost:3000/ | Public (no login) |
+| Kitchen | http://localhost:3000/kitchen | Staff login |
+| Admin | http://localhost:3000/admin | Admin login |
 
-### Frontend (React + Tailwind CSS)
-```
-frontend/
-├── package.json           # Dependencies
-├── webpack.config.js      # Webpack configuration
-├── tailwind.config.js     # Tailwind CSS configuration
-├── postcss.config.js      # PostCSS configuration
-├── public/
-│   └── index.html        # HTML entry point
-└── src/
-    ├── index.js          # React entry point
-    ├── App.js            # Main app component
-    ├── index.css         # Global styles
-    ├── components/       # Reusable components
-    │   ├── Navbar.js
-    │   ├── MenuItem.js
-    │   ├── OrderCustomizer.js
-    │   └── OrderCart.js
-    └── pages/            # Page components
-        ├── OrderMenu.js         # Customer ordering page
-        └── OrderPreparation.js  # Staff order management
-```
+Kitchen staff are redirected away from the customer menu when signed in. Customer navbar does not link to kitchen or admin.
 
 ## Features
 
-### Customer Features (OrderMenu)
-- 🛍️ Browse milk tea menu by category
-- 🎨 Customize drinks (size, sugar level, ice level, add-ons)
-- 📦 Add to cart and manage orders
-- 💳 Checkout with customer information
-- ✅ Order confirmation with order number
+- **Customer** — Browse categories, customize drinks (size, sugar, quantity), checkout with name/phone/notes
+- **Kitchen** — Live order board, status updates, auto-refresh, **Stock** panel to mark drinks sold out
+- **Admin** — Dashboard, analytics, menu & categories, orders export (CSV/PDF), settings (admins, kitchen staff, password)
+- **Stock** — Per-drink `available` flag; sold-out items hidden from customers and rejected on order submit
+- **Security** — JWT auth, bcrypt passwords, server-side price validation
 
-### Staff Features (OrderPreparation)
-- 📊 Dashboard showing all orders
-- 🔄 Filter by order status (pending, preparing, ready, completed)
-- 🖶 Print receipts to thermal printer
-- ⏱️ Auto-refresh order list
-- 🎯 Update order status through workflow
+## Tech stack
 
-### Backend Features
-- 📱 RESTful API for menu and orders
-- 🖨️ ESP32 thermal printer integration
-- 💾 MongoDB/MySQL ready database design
-- 🔐 Extensible for authentication
+- **Backend:** Node.js, Express, `pg`, JWT, bcryptjs
+- **Frontend:** React 18, Tailwind CSS, Webpack, Recharts
+- **Database:** Supabase PostgreSQL
 
-## Technology Stack
+## Project structure
 
-- **Backend**: Node.js + Express.js
-- **Frontend**: React 18 + Tailwind CSS
-- **Build**: Webpack
-- **Styling**: Tailwind CSS
-- **Hardware**: ESP32 Thermal Printer
+```
+milkteaProject/
+├── backend/
+│   ├── server.js
+│   ├── .env.example
+│   ├── supabase/schema.sql      # Run once in Supabase SQL editor
+│   ├── scripts/
+│   │   ├── import-json-to-supabase.js
+│   │   └── reset-admin-password.js
+│   ├── src/
+│   │   ├── db/                  # pool, repositories, initSchema
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── admin/
+│   │   └── routes/
+│   └── data/                    # Legacy JSON backup (optional import source)
+└── frontend/
+    ├── src/
+    │   ├── pages/               # OrderMenu, OrderPreparation, StaffLogin
+    │   ├── admin/
+    │   ├── components/
+    │   └── context/
+    └── public/
+```
 
-## API Endpoints
+## Prerequisites
 
-### Menu Routes
-- `GET /api/menu` - Get all menu items
-- `GET /api/menu/category/:category` - Get by category
-- `GET /api/menu/:id` - Get single item
-- `POST /api/menu` - Create menu item (admin)
-- `PUT /api/menu/:id` - Update menu item
-- `DELETE /api/menu/:id` - Delete menu item
+- Node.js 18+
+- A [Supabase](https://supabase.com) project with PostgreSQL
 
-### Order Routes
-- `GET /api/orders` - Get all orders
-- `GET /api/orders/status/:status` - Get by status
-- `GET /api/orders/:id` - Get single order
-- `POST /api/orders` - Create new order
-- `PUT /api/orders/:id/status` - Update order status
-- `POST /api/orders/:id/print` - Send to thermal printer
-- `DELETE /api/orders/:id` - Delete order
+## Setup
 
-### Printer Routes
-- `GET /api/printer/test` - Test ESP32 connection
+### 1. Database (Supabase)
 
-## Installation
+1. Create a project at [supabase.com](https://supabase.com).
+2. Open **SQL Editor** and run `backend/supabase/schema.sql`.
+3. In **Project Settings → Database**, copy the **Connection string** (URI, pooler mode is fine).
 
-### Backend Setup
+### 2. Backend
+
 ```bash
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your configuration
+```
+
+Edit `backend/.env`:
+
+```env
+PORT=5000
+NODE_ENV=development
+JWT_SECRET=use-a-long-random-string-in-production
+DATABASE_URL=postgresql://postgres.[ref]:[PASSWORD]@....supabase.com:6543/postgres
+```
+
+Optional (scripts / tooling only):
+
+```env
+SUPABASE_URL=https://[ref].supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Start the API (creates default admin/staff if tables are empty):
+
+```bash
 npm start
 ```
 
-### Frontend Setup
+**One-time import** from legacy JSON in `backend/data/` (if you have it):
+
+```bash
+npm run db:import
+```
+
+**Reset a password** (admin or kitchen user):
+
+```bash
+npm run admin:reset-password
+# Follow prompts; defaults: admin / admin123, kitchen / kitchen123
+```
+
+### 3. Frontend
+
 ```bash
 cd frontend
 npm install
-npm start  # Runs on http://localhost:3000
+npm start
 ```
 
-## Environment Variables (.env)
+Open http://localhost:3000. The dev server proxies `/api` and `/health` to port **5000**.
 
-```
-PORT=5000
-NODE_ENV=development
-MONGO_URI=mongodb://localhost:27017/milktea
-ESP32_IP=192.168.1.100
-ESP32_PORT=8080
-```
+### Production build
 
-## ESP32 Thermal Printer Setup
-
-The system expects an ESP32 microcontroller running a web server that:
-1. Listens on the configured IP and PORT
-2. Has a `/print` POST endpoint that accepts JSON with `{ text: "receipt content" }`
-3. Has a `/status` GET endpoint that returns connection status
-
-Example ESP32 endpoint structure:
-```
-POST /print          - Prints the receipt text to thermal printer
-GET /status          - Returns printer status information
+```bash
+cd frontend
+npm run build
+# Output: frontend/dist/
+# Serve dist/ and point API to your backend URL (see frontend/src/api.js)
 ```
 
-## Order Status Workflow
+## Default accounts
+
+Created on first backend start if no users exist (change after setup):
+
+| Role | Username | Password | Login URL |
+|------|----------|----------|-----------|
+| Admin | `admin` | `admin123` | `/admin` |
+| Kitchen staff | `kitchen` | `kitchen123` | `/kitchen` |
+
+## Authentication
+
+- Login returns a JWT (24h). The frontend stores it in `localStorage` and sends `Authorization: Bearer <token>`.
+- **Admin** — `POST /api/admin/login`
+- **Kitchen** — `POST /api/staff/login`
+- Menu mutations, order management (except public create), and `GET /api/menu?all=true` require a valid token.
+
+## API overview
+
+| Public | Protected |
+|--------|-----------|
+| `GET /api/menu` (available drinks only) | `GET /api/menu?all=true` (admin/staff) |
+| `GET /api/categories` | `POST/PUT/DELETE` menu & categories |
+| `POST /api/orders` | Order list, status updates |
+| `GET /health` | Admin & staff user management |
+
+**Stock:** `PUT /api/menu/:id` with body `{ "available": true \| false }` — admin always; kitchen staff when only `available` is sent.
+
+## Order status flow
 
 ```
 pending → preparing → ready → completed
-                   ↓
-              cancelled (optional)
+              ↓
+         cancelled
 ```
 
-## Customization Options
+## Troubleshooting
 
-### Drink Sizes
-- Small (10% off base price)
-- Medium (base price)
-- Large (10% on base price)
+- **Backend won’t start** — Check `DATABASE_URL` in `backend/.env` and that `schema.sql` was applied.
+- **Stock toggle 404** — Restart the backend after pulling changes (`npm start` in `backend/`).
+- **CORS / API errors in dev** — Run frontend on port 3000 and backend on 5000 so the webpack proxy works.
 
-### Sugar Levels
-- 0%, 25%, 50%, 75%, 100%
+## License
 
-## Color Scheme
-
-- **Tea Brown**: #8B6F47
-- **Tea Light**: #D4A574
-- **Milk Cream**: #F0E6D2
-
-## Future Enhancements
-
-- User authentication & admin panel
-- Payment integration (PayMaya, GCash)
-- Order history & analytics
-- Inventory management
-- Real-time WebSocket updates
-- Mobile app version
-- Customer loyalty program
+Private / project use — adjust as needed for your shop.

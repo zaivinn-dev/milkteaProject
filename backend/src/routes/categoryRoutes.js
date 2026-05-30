@@ -1,17 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const categoryController = require('../controllers/categoryController');
+const { authenticate, requireAdmin } = require('../middleware/authMiddleware');
 
-// Get all categories
 router.get('/', categoryController.getAllCategories);
-
-// Update category (must be before the generic POST /)
-router.post('/update', categoryController.updateCategory);
-
-// Create new category
-router.post('/', categoryController.createCategory);
-
-// Delete category
-router.delete('/:name', categoryController.deleteCategory);
+router.post('/update', authenticate, requireAdmin, categoryController.updateCategory);
+router.post('/', authenticate, requireAdmin, categoryController.createCategory);
+router.delete('/:name', authenticate, requireAdmin, categoryController.deleteCategory);
 
 module.exports = router;

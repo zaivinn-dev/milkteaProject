@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import AddDrinkModal from './AddDrinkModal';
 import EditMenuItemModal from './EditMenuItemModal';
+import { AdminPanel, AdminDataTable } from '../ui';
 
 export default function AdminMenuManager({ categories = [] }) {
   const [menuItems, setMenuItems] = useState([]);
@@ -10,10 +11,9 @@ export default function AdminMenuManager({ categories = [] }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
-  // Extract category names from category objects
-  const categoryNames = Array.isArray(categories) ? categories.map(cat => 
-    typeof cat === 'object' ? cat.name : cat
-  ) : [];
+  const categoryNames = Array.isArray(categories)
+    ? categories.map((cat) => (typeof cat === 'object' ? cat.name : cat))
+    : [];
 
   useEffect(() => {
     fetchMenuItems();
@@ -21,7 +21,7 @@ export default function AdminMenuManager({ categories = [] }) {
 
   const fetchMenuItems = async () => {
     try {
-      const response = await axios.get('/api/menu');
+      const response = await api.get('/api/menu?all=true');
       setMenuItems(response.data);
     } catch (error) {
       console.error('Error fetching menu:', error);
@@ -37,7 +37,7 @@ export default function AdminMenuManager({ categories = [] }) {
   const handleDeleteItem = async (id) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
-        await axios.delete(`/api/menu/${id}`);
+        await api.delete(`/api/menu/${id}`);
         fetchMenuItems();
         alert('Menu item deleted!');
       } catch (error) {
@@ -55,95 +55,115 @@ export default function AdminMenuManager({ categories = [] }) {
     fetchMenuItems();
   };
 
-  return (
-    <div>
-      <h2 className="text-3xl font-bold text-tea mb-6">🍜 Menu Items</h2>
+  const handleToggleAvailability = async (item) => {
+    try {
+      const response = await api.put(`/api/menu/${item._id}`, {
+        available: !item.available
+      });
+      setMenuItems((prev) => prev.map((i) => (i._id === item._id ? response.data : i)));
+    } catch (error) {
+      console.error('Error toggling availability:', error);
+      alert(error.response?.data?.message || 'Failed to update stock status');
+    }
+  };
 
-      {/* Add New Drink Button */}
-      <div className="flex justify-end mb-8">
-        <button
-          onClick={() => setShowAddDrinkModal(true)}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg text-white font-bold py-3 px-6 rounded-lg transition flex items-center gap-2"
-        >
-          ➕ Add New Drink
+  const soldOutCount = menuItems.filter((i) => !i.available).length;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-end">
+        <button type="button" onClick={() => setShowAddDrinkModal(true)} className="btn-primary">
+          Add drink
         </button>
       </div>
 
-      {/* Menu Items List */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <h3 className="text-xl font-bold text-tea px-6 py-4 border-b">Current Menu ({menuItems.length} items)</h3>
+      <AdminPanel
+        title={`Menu items (${menuItems.length})`}
+        description={
+          soldOutCount > 0
+            ? `${soldOutCount} marked sold out — hidden from customer menu`
+            : 'Toggle stock so sold-out drinks are hidden from customers'
+        }
+      >
         {loading ? (
-          <p className="p-6 text-center text-gray-500">Loading menu...</p>
-        ) : menuItems.length === 0 ? (
-          <p className="p-6 text-center text-gray-500">No menu items yet. Add your first drink above!</p>
-        ) : (
-          <div className="overflow-x-auto max-h-[640px] overflow-y-auto">
-            <table className="w-full">
-              <thead className="bg-tea text-white">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm">Item</th>
-                  <th className="px-4 py-3 text-left text-sm">Category</th>
-                  <th className="px-4 py-3 text-left text-sm">Sizes/Price</th>
-                  <th className="px-4 py-3 text-center text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {menuItems.map(item => (
-                  <tr key={item._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
-                        ) : (
-                          <div className="w-12 h-12 bg-gradient-to-br from-teaLight to-tea flex items-center justify-center rounded text-xl">
-                            🧋
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-bold text-tea text-sm">{item.name}</p>
-                          <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 capitalize">{item.category}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {item.sizes && item.sizes.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {item.sizes.map((size, idx) => (
-                            <span key={idx} className="bg-tea text-white px-2 py-1 rounded text-xs font-semibold">
-                              {size.size}: ₱{size.price}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500 text-xs">₱{item.basePrice}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => handleEditItem(item)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded text-xs"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDeleteItem(item._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-3 rounded text-xs"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex justify-center py-16">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-milk border-t-tea" />
           </div>
+        ) : (
+          <AdminDataTable
+            columns={['Item', 'Category', 'Sizes / price', 'Stock', 'Actions']}
+            isEmpty={menuItems.length === 0}
+            emptyMessage="No menu items yet. Add your first drink."
+          >
+            {menuItems.map((item) => (
+              <tr key={item._id} className={!item.available ? 'bg-amber-50/40' : ''}>
+                <td>
+                  <div className="flex items-center gap-3">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt=""
+                        className={`h-12 w-12 rounded-lg object-cover ring-1 ring-surface-border ${!item.available ? 'opacity-60 grayscale' : ''}`}
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-milk text-xl">
+                        🧋
+                      </div>
+                    )}
+                    <div>
+                      <p className={`font-semibold ${item.available ? 'text-tea' : 'text-tea-muted'}`}>
+                        {item.name}
+                      </p>
+                      <p className="line-clamp-1 text-xs text-tea-muted">{item.description}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="capitalize text-tea-muted">{item.category}</td>
+                <td>
+                  {item.sizes && item.sizes.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {item.sizes.map((size, idx) => (
+                        <span key={idx} className="badge bg-tea/10 text-tea ring-tea/20">
+                          {size.size}: ₱{size.price}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-tea-muted">₱{item.basePrice}</span>
+                  )}
+                </td>
+                <td>
+                  <div className="flex flex-col items-start gap-2">
+                    {item.available ? (
+                      <span className="badge-success">In stock</span>
+                    ) : (
+                      <span className="badge-sold-out">Sold out</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAvailability(item)}
+                      className="text-xs font-semibold text-tea hover:text-tea-dark underline-offset-2 hover:underline"
+                    >
+                      {item.available ? 'Mark sold out' : 'Mark in stock'}
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <div className="flex justify-center gap-2">
+                    <button type="button" onClick={() => handleEditItem(item)} className="btn-secondary px-3 py-1.5 text-xs">
+                      Edit
+                    </button>
+                    <button type="button" onClick={() => handleDeleteItem(item._id)} className="btn-danger px-3 py-1.5 text-xs">
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </AdminDataTable>
         )}
-      </div>
+      </AdminPanel>
 
-      {/* Add Drink Modal */}
       {showAddDrinkModal && (
         <AddDrinkModal
           categories={categoryNames}
@@ -152,7 +172,6 @@ export default function AdminMenuManager({ categories = [] }) {
         />
       )}
 
-      {/* Edit Menu Item Modal */}
       {showEditModal && editingItem && (
         <EditMenuItemModal
           item={editingItem}

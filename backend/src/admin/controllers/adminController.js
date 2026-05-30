@@ -1,42 +1,19 @@
-const fs = require('fs');
-const path = require('path');
+const bcrypt = require('bcryptjs');
+const { signToken } = require('../../middleware/authMiddleware');
+const adminRepository = require('../../db/adminRepository');
 
-// File path for persisting admin users
-const adminFile = path.join(__dirname, '../../../data/admins.json');
+const hashPassword = (password) => bcrypt.hashSync(password, 10);
 
-// Ensure data directory exists
-const ensureDataDir = () => {
-  const dataDir = path.join(__dirname, '../../../data');
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+const ensureDefaultAdmin = async () => {
+  const count = await adminRepository.count();
+  if (count === 0) {
+    await adminRepository.create('admin', hashPassword('admin123'));
+    console.log('Created default admin user: admin / admin123');
   }
 };
 
-// Load admin users from file
-const loadAdmins = () => {
-  ensureDataDir();
-  if (fs.existsSync(adminFile)) {
-    const data = fs.readFileSync(adminFile, 'utf8');
-    return JSON.parse(data);
-  }
-  // Default admin user if no file exists
-  const defaultAdmins = [
-    { username: 'admin', password: 'admin123' }
-  ];
-  saveAdmins(defaultAdmins);
-  return defaultAdmins;
-};
+exports.ensureDefaultAdmin = ensureDefaultAdmin;
 
-// Save admin users to file
-const saveAdmins = (adminsData) => {
-  ensureDataDir();
-  fs.writeFileSync(adminFile, JSON.stringify(adminsData, null, 2), 'utf8');
-};
-
-// In-memory admin storage - load from file on startup
-let admins = loadAdmins();
-
-// Admin login
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -45,36 +22,33 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
-    const admin = admins.find(a => a.username === username && a.password === password);
-
-    if (!admin) {
+    const admin = await adminRepository.findByUsername(username);
+    if (!admin || !bcrypt.compareSync(password, admin.password)) {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
+    const user = { username: admin.username, role: 'admin' };
+    const token = signToken(user);
+
     res.json({
       message: 'Login successful',
-      user: {
-        username: admin.username,
-        role: 'admin'
-      }
+      user,
+      token
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get all admin users (for management)
 exports.getAllAdmins = async (req, res) => {
   try {
-    // Return without passwords for security
-    const adminList = admins.map(a => ({ username: a.username }));
-    res.json(adminList);
+    const admins = await adminRepository.findAll();
+    res.json(admins.map((a) => ({ username: a.username })));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Create new admin user
 exports.createAdmin = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -82,26 +56,24 @@ exports.createAdmin = async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password are required' });
     }
-
-    // Check if admin already exists
-    if (admins.find(a => a.username === username)) {
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+    if (await adminRepository.findByUsername(username)) {
       return res.status(400).json({ message: 'Admin username already exists' });
     }
 
-    const newAdmin = { username, password };
-    admins.push(newAdmin);
-    saveAdmins(admins);
+    await adminRepository.create(username, hashPassword(password));
 
     res.status(201).json({
       message: 'Admin created successfully',
-      user: { username: newAdmin.username }
+      user: { username }
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Update admin password
 exports.updateAdminPassword = async (req, res) => {
   try {
     const { username, oldPassword, newPassword } = req.body;
@@ -109,19 +81,19 @@ exports.updateAdminPassword = async (req, res) => {
     if (!username || !oldPassword || !newPassword) {
       return res.status(400).json({ message: 'All fields are required' });
     }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
 
-    const admin = admins.find(a => a.username === username);
-
+    const admin = await adminRepository.findByUsername(username);
     if (!admin) {
       return res.status(404).json({ message: 'Admin not found' });
     }
-
-    if (admin.password !== oldPassword) {
+    if (!bcrypt.compareSync(oldPassword, admin.password)) {
       return res.status(401).json({ message: 'Old password is incorrect' });
     }
 
-    admin.password = newPassword;
-    saveAdmins(admins);
+    await adminRepository.updatePassword(username, hashPassword(newPassword));
 
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
@@ -129,26 +101,20 @@ exports.updateAdminPassword = async (req, res) => {
   }
 };
 
-// Delete admin user
 exports.deleteAdmin = async (req, res) => {
   try {
     const { username } = req.params;
 
-    // Prevent deleting the last admin
-    if (admins.length === 1) {
+    if ((await adminRepository.count()) <= 1) {
       return res.status(400).json({ message: 'Cannot delete the last admin user' });
     }
 
-    const index = admins.findIndex(a => a.username === username);
-
-    if (index === -1) {
+    const deleted = await adminRepository.remove(username);
+    if (!deleted) {
       return res.status(404).json({ message: 'Admin not found' });
     }
 
-    const deleted = admins.splice(index, 1);
-    saveAdmins(admins);
-
-    res.json({ message: 'Admin deleted successfully', user: { username: deleted[0].username } });
+    res.json({ message: 'Admin deleted successfully', user: { username } });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

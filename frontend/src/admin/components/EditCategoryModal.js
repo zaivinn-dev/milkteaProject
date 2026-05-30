@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+import api from '../../api';
 
 export default function EditCategoryModal({ category, image, onClose, onSuccess }) {
   const [editName, setEditName] = useState(category || '');
@@ -45,7 +45,7 @@ export default function EditCategoryModal({ category, image, onClose, onSuccess 
       };
 
       // Send via POST to /api/categories/update to avoid URL encoding issues
-      await axios.post('/api/categories/update', updateData);
+      await api.post('/api/categories/update', updateData);
       alert('Category updated successfully!');
       onSuccess();
       onClose();
@@ -58,9 +58,9 @@ export default function EditCategoryModal({ category, image, onClose, onSuccess 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
-        <h2 className="text-2xl font-bold text-tea mb-6">✏️ Edit Category</h2>
+    <div className="admin-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="card w-full max-w-md p-6 md:p-8 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-display text-xl font-semibold text-tea mb-6">Edit category</h2>
 
         <form onSubmit={handleUpdateCategory} className="space-y-4">
           {/* Image Upload */}
@@ -97,26 +97,18 @@ export default function EditCategoryModal({ category, image, onClose, onSuccess 
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="w-full border-2 border-tea rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-teaLight"
+              className="input-field"
               placeholder="Enter category name"
             />
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3 mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition"
-            >
+          <div className="mt-6 flex gap-3">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Cancel
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg text-white font-bold py-2 px-4 rounded-lg transition disabled:opacity-50"
-            >
-              {loading ? 'Updating...' : '✓ Update'}
+            <button type="submit" disabled={loading} className="btn-primary flex-1 disabled:opacity-50">
+              {loading ? 'Updating…' : 'Save'}
             </button>
           </div>
         </form>

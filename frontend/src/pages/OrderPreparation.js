@@ -1,5 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api';
+
+const STATUS_STYLES = {
+  pending: 'border-amber-400 bg-gradient-to-br from-amber-50/80 to-white',
+  preparing: 'border-sky-400 bg-gradient-to-br from-sky-50/80 to-white',
+  ready: 'border-emerald-400 bg-gradient-to-br from-emerald-50/80 to-white',
+  completed: 'border-surface-border bg-surface-soft',
+  cancelled: 'border-red-300 bg-red-50/50'
+};
+
+const STATUS_BADGE = {
+  pending: 'bg-amber-100 text-amber-900 ring-amber-200',
+  preparing: 'bg-sky-100 text-sky-900 ring-sky-200',
+  ready: 'bg-emerald-100 text-emerald-900 ring-emerald-200',
+  completed: 'bg-slate-100 text-slate-700 ring-slate-200',
+  cancelled: 'bg-red-100 text-red-900 ring-red-200'
+};
+
+const FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'pending', label: 'Pending' },
+  { id: 'preparing', label: 'Preparing' },
+  { id: 'ready', label: 'Ready' },
+  { id: 'completed', label: 'Done' }
+];
 
 export default function OrderPreparation() {
   const [orders, setOrders] = useState([]);
@@ -22,7 +46,7 @@ export default function OrderPreparation() {
       if (filter !== 'all') {
         url = `/api/orders/status/${filter}`;
       }
-      const response = await axios.get(url);
+      const response = await api.get(url);
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -33,220 +57,146 @@ export default function OrderPreparation() {
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      await axios.put(`/api/orders/${orderId}/status`, { status: newStatus });
+      await api.put(`/api/orders/${orderId}/status`, { status: newStatus });
       fetchOrders();
     } catch (error) {
       console.error('Error updating order status:', error);
     }
   };
 
-  const handlePrintOrder = async (orderId) => {
-    try {
-      const response = await axios.post(`/api/orders/${orderId}/print`);
-      if (response.data.success) {
-        alert(`✓ Order ${response.data.orderNumber} sent to printer!`);
-      } else {
-        alert(`✗ Printer Error:\n${response.data.message}\n${response.data.details || ''}`);
-      }
-    } catch (error) {
-      console.error('Error printing order:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to send to printer';
-      const details = error.response?.data?.details || 'Check if ESP32 is connected';
-      alert(`✗ Print failed:\n${errorMsg}\n${details}`);
-    }
-  };
-
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: 'bg-yellow-100 border-yellow-300 text-yellow-800',
-      preparing: 'bg-blue-100 border-blue-300 text-blue-800',
-      ready: 'bg-green-100 border-green-300 text-green-800',
-      completed: 'bg-gray-100 border-gray-300 text-gray-800',
-      cancelled: 'bg-red-100 border-red-300 text-red-800'
-    };
-    return colors[status] || 'bg-gray-100';
-  };
-
-  const getStatusButtonColor = (status) => {
-    const colors = {
-      pending: 'bg-yellow-500 hover:bg-yellow-600',
-      preparing: 'bg-blue-500 hover:bg-blue-600',
-      ready: 'bg-green-500 hover:bg-green-600',
-      completed: 'bg-gray-500 hover:bg-gray-600'
-    };
-    return colors[status] || 'bg-gray-500';
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teaLight py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="mb-8">
-          <h2 className="text-5xl font-bold text-tea mb-3">Preparation</h2>
-          <p className="text-gray-600 text-lg">Monitor, prepare, and manage customer orders</p>
-        </div>
-
-        {/* Controls */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border-t-4 border-tea">
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex gap-2 flex-wrap">
-              {['all', 'pending', 'preparing', 'ready', 'completed'].map(status => (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`px-6 py-2 rounded-full font-bold transition text-sm ${
-                    filter === status
-                      ? 'bg-gradient-to-r from-tea to-teaLight text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {status === 'all' && '🎯 All'}
-                  {status === 'pending' && '⏳ Pending'}
-                  {status === 'preparing' && '👨‍🍳 Preparing'}
-                  {status === 'ready' && '✅ Ready'}
-                  {status === 'completed' && '✔️ Completed'}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="autoRefresh"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="w-5 h-5 cursor-pointer"
-              />
-              <label htmlFor="autoRefresh" className="font-bold text-gray-700 cursor-pointer">Auto Refresh (3s)</label>
-              <button
-                onClick={fetchOrders}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg text-white font-bold py-2 px-6 rounded-lg transition"
-              >
-                🔄 Refresh
-              </button>
-            </div>
+    <div className="page-kitchen py-6 md:py-10">
+      <div className="mx-auto max-w-7xl px-4 md:px-6">
+        <header className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.15em] text-tea-muted">Kitchen</p>
+            <h2 className="section-title">Order board</h2>
+            <p className="section-subtitle">Prepare and update order status in real time</p>
           </div>
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-white px-4 py-2.5 shadow-soft ring-1 ring-surface-border">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="h-4 w-4 rounded border-surface-border text-tea focus:ring-brew-caramel"
+            />
+            <span className="text-sm font-medium text-tea">Auto-refresh (3s)</span>
+          </label>
+        </header>
+
+        <div className="card mb-8 flex flex-wrap items-center justify-between gap-4 p-4 md:p-5">
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setFilter(id)}
+                className={filter === id ? 'chip-active' : 'chip-inactive'}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={fetchOrders} className="btn-secondary">
+            Refresh
+          </button>
         </div>
 
-        {/* Orders Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {loading ? (
-            <div className="col-span-full text-center py-12">
-              <p className="text-2xl text-gray-500">⏳ Loading orders...</p>
+            <div className="col-span-full py-20 text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-milk border-t-tea" />
+              <p className="mt-4 text-tea-muted">Loading orders…</p>
             </div>
           ) : orders.length === 0 ? (
-            <div className="col-span-full text-center py-12">
-              <p className="text-4xl mb-3">😴</p>
-              <p className="text-2xl text-gray-500">No orders at the moment</p>
+            <div className="col-span-full rounded-3xl border border-dashed border-surface-border bg-white/60 py-20 text-center">
+              <p className="text-4xl">☕</p>
+              <p className="mt-3 font-display text-xl text-tea">No orders here</p>
+              <p className="text-sm text-tea-muted">New orders will appear automatically</p>
             </div>
           ) : (
-            orders.map(order => (
-              <div
+            orders.map((order) => (
+              <article
                 key={order._id}
-                className={`rounded-2xl shadow-lg overflow-hidden transition hover:shadow-2xl border-l-4 ${
-                  order.status === 'pending'
-                    ? 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-white'
-                    : order.status === 'preparing'
-                    ? 'border-blue-400 bg-gradient-to-br from-blue-50 to-white'
-                    : order.status === 'ready'
-                    ? 'border-green-400 bg-gradient-to-br from-green-50 to-white'
-                    : 'border-gray-400 bg-gray-50'
+                className={`card overflow-hidden border-l-4 shadow-soft transition hover:shadow-card ${
+                  STATUS_STYLES[order.status] || STATUS_STYLES.completed
                 }`}
               >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-tea to-teaLight text-white p-4">
-                  <div className="flex justify-between items-start mb-2">
+                <div className="bg-tea px-4 py-3 text-white">
+                  <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-2xl font-bold">{order.orderNumber}</h3>
-                      <p className="text-sm opacity-90">
+                      <h3 className="font-display text-2xl font-semibold">{order.orderNumber}</h3>
+                      <p className="text-xs text-brew-foam/90">
                         {new Date(order.createdAt).toLocaleTimeString()}
                       </p>
                     </div>
-                    <span className={`px-4 py-2 rounded-full font-bold text-sm ${
-                      order.status === 'pending' ? 'bg-yellow-400 text-yellow-900' :
-                      order.status === 'preparing' ? 'bg-blue-400 text-blue-900' :
-                      order.status === 'ready' ? 'bg-green-400 text-green-900' :
-                      'bg-gray-400 text-gray-900'
-                    }`}>
-                      {order.status.toUpperCase()}
+                    <span
+                      className={`badge shrink-0 ring-1 ${STATUS_BADGE[order.status] || STATUS_BADGE.completed}`}
+                    >
+                      {order.status}
                     </span>
                   </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-4">
                   {order.customerName && (
-                    <p className="font-bold text-lg text-tea mb-3">👤 {order.customerName}</p>
+                    <p className="mb-3 font-semibold text-tea">{order.customerName}</p>
                   )}
 
-                  {/* Items */}
-                  <div className="bg-white rounded-lg p-3 mb-4 max-h-48 overflow-y-auto border-2 border-gray-200">
-                    <p className="font-bold text-tea mb-2 text-sm">📋 Items:</p>
+                  <div className="mb-4 max-h-44 overflow-y-auto rounded-xl bg-white p-3 ring-1 ring-surface-border">
                     {order.items.map((item, idx) => (
-                      <div key={idx} className="text-sm mb-2 pb-2 border-b last:border-b-0">
-                        <p className="font-bold text-tea">{item.name} x{item.quantity}</p>
-                        <p className="text-xs text-gray-600">
-                          {item.size} | Sugar: {item.sugarLevel}
+                      <div key={idx} className="border-b border-surface-border py-2 text-sm last:border-0">
+                        <p className="font-semibold text-tea">
+                          {item.name} ×{item.quantity}
                         </p>
-                        {item.addOns && item.addOns.length > 0 && (
-                          <p className="text-xs text-teaLight">➕ {item.addOns.join(', ')}</p>
-                        )}
+                        <p className="text-xs text-tea-muted">
+                          {item.size} · {item.sugarLevel} sugar
+                        </p>
                       </div>
                     ))}
                   </div>
 
                   {order.notes && (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded mb-4">
-                      <p className="text-sm text-gray-700">
-                        <span className="font-bold">💬 Note:</span> {order.notes}
-                      </p>
+                    <div className="mb-4 rounded-xl border-l-4 border-amber-400 bg-amber-50/80 px-3 py-2 text-sm text-tea-dark">
+                      <span className="font-semibold">Note:</span> {order.notes}
                     </div>
                   )}
 
-                  <p className="font-bold text-lg text-tea mb-4">
-                    Total: ₱{order.totalAmount.toFixed(2)}
+                  <p className="mb-4 font-display text-lg font-semibold text-tea">
+                    ₱{order.totalAmount.toFixed(2)}
                   </p>
 
-                  {/* Actions */}
                   <div className="flex flex-col gap-2">
-                    {order.status !== 'completed' && order.status !== 'cancelled' && (
-                      <>
-                        {order.status === 'pending' && (
-                          <button
-                            onClick={() => handleStatusChange(order._id, 'preparing')}
-                            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg text-white font-bold py-2 px-4 rounded-lg transition"
-                          >
-                            👨‍🍳 Start Preparing
-                          </button>
-                        )}
-                        {order.status === 'preparing' && (
-                          <button
-                            onClick={() => handleStatusChange(order._id, 'ready')}
-                            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:shadow-lg text-white font-bold py-2 px-4 rounded-lg transition"
-                          >
-                            ✅ Mark as Ready
-                          </button>
-                        )}
-                        {(order.status === 'pending' || order.status === 'preparing') && (
-                          <button
-                            onClick={() => handlePrintOrder(order._id)}
-                            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:shadow-lg text-white font-bold py-2 px-4 rounded-lg transition"
-                          >
-                            🖨️ Print Receipt
-                          </button>
-                        )}
-                      </>
+                    {order.status === 'pending' && (
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(order._id, 'preparing')}
+                        className="btn-primary w-full bg-sky-600 from-sky-600 to-sky-700"
+                      >
+                        Start preparing
+                      </button>
                     )}
-
+                    {order.status === 'preparing' && (
+                      <button
+                        type="button"
+                        onClick={() => handleStatusChange(order._id, 'ready')}
+                        className="btn-primary w-full"
+                      >
+                        Mark ready
+                      </button>
+                    )}
                     {order.status === 'ready' && (
                       <button
+                        type="button"
                         onClick={() => handleStatusChange(order._id, 'completed')}
-                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-lg text-white font-bold py-2 px-4 rounded-lg transition"
+                        className="btn-primary w-full bg-emerald-600 from-emerald-600 to-emerald-700"
                       >
-                        ✓ Complete Order
+                        Complete
                       </button>
                     )}
                   </div>
                 </div>
-              </div>
+              </article>
             ))
           )}
         </div>

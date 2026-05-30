@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 
 export default function DeleteCategoryModal({ category, items, onClose, onSuccess, categories }) {
   const [targetCategory, setTargetCategory] = useState('');
@@ -28,7 +28,7 @@ export default function DeleteCategoryModal({ category, items, onClose, onSucces
         console.log(`Reassigning ${categoryItems.length} items to ${targetCategory}`);
         for (const item of categoryItems) {
           console.log(`Updating item ${item._id} to category ${targetCategory}`);
-          const updateResponse = await axios.put(`/api/menu/${item._id}`, { category: targetCategory });
+          const updateResponse = await api.put(`/api/menu/${item._id}`, { category: targetCategory });
           console.log(`Updated item: ${item._id}`, updateResponse.data);
         }
       } else if (action === 'delete') {
@@ -36,7 +36,7 @@ export default function DeleteCategoryModal({ category, items, onClose, onSucces
         console.log(`Deleting ${categoryItems.length} items`);
         for (const item of categoryItems) {
           console.log(`Deleting item ${item._id}`);
-          const deleteResponse = await axios.delete(`/api/menu/${item._id}`);
+          const deleteResponse = await api.delete(`/api/menu/${item._id}`);
           console.log(`Deleted item: ${item._id}`, deleteResponse.data);
         }
       }
@@ -62,7 +62,7 @@ export default function DeleteCategoryModal({ category, items, onClose, onSucces
 
       // Delete the category
       console.log(`Deleting category: ${category}`);
-      const catDeleteResponse = await axios.delete(`/api/categories/${encodeURIComponent(category)}`);
+      const catDeleteResponse = await api.delete(`/api/categories/${encodeURIComponent(category)}`);
       console.log(`Category deleted:`, catDeleteResponse.data);
 
       console.log('All operations completed successfully');
@@ -93,9 +93,9 @@ export default function DeleteCategoryModal({ category, items, onClose, onSucces
     .filter(cat => cat !== category);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-        <h2 className="text-2xl font-bold text-tea mb-4">⚠️ Delete Category</h2>
+    <div className="admin-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="card w-full max-w-md p-6 md:p-8 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-display text-xl font-semibold text-tea mb-4">Delete category</h2>
 
         <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
           <p className="font-bold text-yellow-800 mb-2">This category has {categoryItems.length} item(s):</p>
@@ -135,7 +135,7 @@ export default function DeleteCategoryModal({ category, items, onClose, onSucces
                 <select
                   value={targetCategory}
                   onChange={(e) => setTargetCategory(e.target.value)}
-                  className="mt-3 w-full border-2 border-tea rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-teaLight font-bold"
+                  className="input-field mt-3 font-semibold"
                 >
                   <option value="">Select a category...</option>
                   {otherCategories.map(cat => (
@@ -169,19 +169,11 @@ export default function DeleteCategoryModal({ category, items, onClose, onSucces
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 font-bold rounded-lg hover:bg-gray-300 transition disabled:opacity-50"
-          >
+          <button type="button" onClick={onClose} disabled={loading} className="btn-secondary flex-1 disabled:opacity-50">
             Cancel
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={loading}
-            className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-lg hover:shadow-lg transition disabled:opacity-50"
-          >
-            {loading ? 'Processing...' : 'Confirm'}
+          <button type="button" onClick={handleDelete} disabled={loading} className="btn-danger flex-1 disabled:opacity-50">
+            {loading ? 'Processing…' : 'Confirm'}
           </button>
         </div>
       </div>

@@ -1,99 +1,59 @@
-# ========== NODE.JS / NPM ==========
+# Dependencies
 node_modules/
-npm-debug.log
+
+# Environment & secrets (never commit)
+.env
+.env.local
+.env.*.local
+!.env.example
+!**/.env.example
+supabasedatapassword
+*.pem
+*.key
+secrets/
+config/local*
+
+# Build output
+dist/
+build/
+out/
+.next/
+
+# Logs & debug
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.npm
 .eslintcache
-.node_repl_history
-*.tgz
-*.zip
 
-# ========== REACT / VITE ==========
-dist/
-build/
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.next/
-out/
-*.swp
-*.swo
+# Legacy JSON data (optional local backup; use Supabase in production)
+backend/data/*.json
+!backend/data/.gitkeep
 
-# ========== PYTHON ==========
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-.venv
-
-# ========== IDE / EDITORS ==========
+# OS & editors
+.DS_Store
+Thumbs.db
+desktop.ini
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
 *.code-workspace
-.sublime-project
-.sublime-workspace
-.vim/
-*.sublime-settings
 
-# ========== ENVIRONMENT VARIABLES ==========
-.env
-.env.local
-.env.*.local
+# Python (if any tooling)
+__pycache__/
+.venv/
+venv/
 
-# ========== LOGS ==========
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-
-# ========== DATA FILES ==========
-data/*.json
-!data/.gitkeep
-
-# ========== ARDUINO / ESP32 ==========
-.pio/
-.pioenvs/
-.piolibdeps/
-.pio
-*.o
-*.a
-*.so
-build-*/
-*.bin
-*.hex
-.Arduino/
-.ard_*
-
-# ========== OS FILES ==========
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# ========== PROJECT SPECIFIC ==========
+# Temp
 .cache/
 .temp/
 tmp/
 temp/
+*.tmp
 
-# ========== PRIVATE KEYS / SECRETS ==========
-*.pem
-*.key
-*.private
-secrets/
-config/local*
+# Test coverage
+coverage/
+.nyc_output/

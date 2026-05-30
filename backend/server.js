@@ -2,6 +2,11 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const { testConnection } = require('./src/db/pool');
+const { initSchema } = require('./src/db/initSchema');
+const { ensureDefaultAdmin } = require('./src/admin/controllers/adminController');
+const { ensureDefaultStaff } = require('./src/controllers/staffController');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -20,19 +25,15 @@ app.use((req, res, next) => {
 app.use('/api/admin', require('./src/admin/routes/adminRoutes'));
 app.use('/api/menu', require('./src/routes/menuRoutes'));
 app.use('/api/orders', require('./src/routes/orderRoutes'));
-app.use('/api/printer', require('./src/routes/printerRoutes'));
 app.use('/api/categories', require('./src/routes/categoryRoutes'));
+app.use('/api/staff', require('./src/routes/staffRoutes'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK',
     message: 'Backend is running',
-    timestamp: new Date(),
-    env: {
-      ESP32_IP: process.env.ESP32_IP || '192.168.4.1',
-      ESP32_PORT: process.env.ESP32_PORT || 8080
-    }
+    timestamp: new Date()
   });
 });
 
@@ -62,6 +63,19 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('═══════════════════════════════════════════════════════════════════════════════\n');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+async function start() {
+  try {
+    await testConnection();
+    await initSchema();
+    await ensureDefaultAdmin();
+    await ensureDefaultStaff();
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT} (Supabase PostgreSQL)`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err.message);
+    process.exit(1);
+  }
+}
+
+start();

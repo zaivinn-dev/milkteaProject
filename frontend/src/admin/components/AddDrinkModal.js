@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 
 export default function AddDrinkModal({ categories, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -8,7 +8,8 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
     category: categories[0]?.name || categories[0] || 'classic',
     basePrice: '',
     image: null,
-    sizes: []
+    sizes: [],
+    available: true
   });
   const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -98,10 +99,11 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
         category: typeof formData.category === 'object' ? formData.category.name : formData.category,
         basePrice: basePrice,
         image: formData.image || null,
-        sizes: formData.sizes.length > 0 ? formData.sizes : []
+        sizes: formData.sizes.length > 0 ? formData.sizes : [],
+        available: formData.available
       };
 
-      await axios.post('/api/menu', itemData);
+      await api.post('/api/menu', itemData);
       onSuccess();
       onClose();
     } catch (err) {
@@ -113,9 +115,9 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 my-8">
-        <h2 className="text-3xl font-bold text-tea mb-6">🍵 Add New Drink</h2>
+    <div className="admin-modal-backdrop overflow-y-auto py-8" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="card my-8 w-full max-w-md p-6 md:p-8 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-display text-xl font-semibold text-tea mb-6">Add new drink</h2>
 
         {error && (
           <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
@@ -167,7 +169,7 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
               placeholder="e.g., Taro Milk Tea"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full border-2 border-tea rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-teaLight"
+              className="input-field"
               required
             />
           </div>
@@ -181,7 +183,7 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
               value={formData.description}
               onChange={handleInputChange}
               rows="2"
-              className="w-full border-2 border-tea rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-teaLight resize-none text-sm"
+              className="input-field resize-none text-sm"
               required
             />
           </div>
@@ -193,7 +195,7 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
               name="category"
               value={formData.category}
               onChange={handleInputChange}
-              className="w-full border-2 border-tea rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-teaLight font-bold"
+              className="input-field font-semibold"
             >
               {categories.map(cat => {
                 const catName = typeof cat === 'object' ? cat.name : cat;
@@ -206,6 +208,16 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
             </select>
           </div>
 
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-surface-border bg-surface-soft px-4 py-3">
+            <input
+              type="checkbox"
+              checked={formData.available}
+              onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
+              className="h-5 w-5 rounded border-surface-border text-tea focus:ring-brew-caramel"
+            />
+            <span className="text-sm font-semibold text-tea">Available for customer ordering</span>
+          </label>
+
           {/* Base Price */}
           <div>
             <label className="block text-sm font-bold text-tea mb-2">Base Price (₱) - Optional</label>
@@ -217,13 +229,13 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
               onChange={handleInputChange}
               min="0"
               step="0.01"
-              className="w-full border-2 border-tea rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-teaLight"
+              className="input-field"
             />
           </div>
 
           {/* Sizes with Prices */}
-          <div className="border-2 border-teaLight rounded-lg p-4 bg-milk">
-            <h3 className="font-bold text-tea mb-3">📏 Add Sizes (Optional)</h3>
+          <div className="rounded-xl border border-surface-border bg-milk p-4">
+            <h3 className="mb-3 font-semibold text-tea">Sizes (optional)</h3>
             
             {/* Add Size Section */}
             <div className="flex gap-2 mb-3">
@@ -232,7 +244,7 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
                 placeholder="Size (e.g., Medium)"
                 value={newSize.size}
                 onChange={(e) => setNewSize({ ...newSize, size: e.target.value })}
-                className="flex-1 border-2 border-tea rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-teaLight"
+                className="input-field py-2 text-sm"
               />
               <input
                 type="number"
@@ -241,7 +253,7 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
                 onChange={(e) => setNewSize({ ...newSize, price: e.target.value })}
                 min="0"
                 step="0.01"
-                className="w-20 border-2 border-tea rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-teaLight"
+                className="input-field w-20 py-2 text-sm"
               />
               <button
                 type="button"
@@ -272,21 +284,12 @@ export default function AddDrinkModal({ categories, onClose, onSuccess }) {
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3 mt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-lg transition"
-              disabled={loading}
-            >
+          <div className="mt-4 flex gap-3">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1" disabled={loading}>
               Cancel
             </button>
-            <button
-              type="submit"
-              className="flex-1 bg-gradient-to-r from-tea to-teaLight hover:shadow-lg text-white font-bold py-3 rounded-lg transition disabled:opacity-50"
-              disabled={loading}
-            >
-              {loading ? 'Adding...' : 'Add Drink'}
+            <button type="submit" className="btn-primary flex-1 disabled:opacity-50" disabled={loading}>
+              {loading ? 'Adding…' : 'Add drink'}
             </button>
           </div>
         </form>
